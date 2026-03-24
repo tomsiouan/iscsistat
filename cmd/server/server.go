@@ -67,7 +67,9 @@ func NewServer(cfg config.Config, logger *zap.Logger) *Server {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	http2.ConfigureServer(srv, &http2.Server{})
+	if err := http2.ConfigureServer(srv, &http2.Server{}); err != nil {
+		s.logger.Fatal("failed to configure http2", zap.Error(err))
+	}
 
 	s.httpServer = srv
 	return s

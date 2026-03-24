@@ -41,7 +41,7 @@ func run(ctx context.Context) error {
 		fmt.Fprintf(os.Stderr, "failed to create logger: %v\n", err)
 		return fmt.Errorf("failed to create logger: %w", err)
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	configPath, err := handleCLIWithFlagSet(flag.CommandLine)
 	if err != nil {
@@ -84,7 +84,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to create logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	if err := run(ctx); err != nil {
 		logger.Error("Application terminated with error", zap.Error(err))

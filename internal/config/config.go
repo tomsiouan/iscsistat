@@ -126,5 +126,5 @@ func formatValidationErrors(errors []validator.FieldError) error {
 	for _, err := range errors {
 		sb.WriteString(fmt.Sprintf("\n - %s: %s", err.Field, err.Message))
 	}
-	return fmt.Errorf(sb.String())
+	return fmt.Errorf("%s", sb.String())
 }
