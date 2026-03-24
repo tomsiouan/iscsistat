@@ -53,3 +53,11 @@ The `iscsiadm` command-line utility is employed to discover available iSCSI targ
 ## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or open issues on the project's repository.
+
+### 🧪 Tested Environments
+
+| iSCSI Provider | CSI Plugin | Status |
+|---|---|---|
+| Synology NAS | [democratic-csi](https://github.com/democratic-csi/democratic-csi) | ✅ Tested |
+
+If you successfully use this exporter with another iSCSI provider or CSI plugin, please open a PR or issue to update this table!
