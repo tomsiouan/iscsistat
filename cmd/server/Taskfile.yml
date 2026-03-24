@@ -1,0 +1,43 @@
+package main
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"go.uber.org/zap"
+)
+
+func (s *Server) routes() http.Handler {
+	r := chi.NewRouter()
+
+	r.Use(s.ZapHttpLogger)
+
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(60 * time.Second))
+
+	r.Get("/metrics", s.handleMetrics())
+
+	return r
+}
+
+func (s *Server) ZapHttpLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+		next.ServeHTTP(ww, r)
+
+		latency := time.Since(start)
+
+		s.logger.Info("http request",
+			zap.String("method", r.Method),
+			zap.String("path", r.URL.Path),
+			zap.Int("status", ww.Status()),
+			zap.Duration("latency", latency),
+			zap.String("ip", r.RemoteAddr),
+		)
+	})
+}

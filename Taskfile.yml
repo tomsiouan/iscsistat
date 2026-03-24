@@ -1,0 +1,25 @@
+version: "3"
+
+vars:
+  BINARY_NAME: server
+  MAIN_PATH: ./cmd/server
+
+tasks:
+  default:
+    desc: Default task (build)
+    cmds:
+      - task: build
+
+  build:
+    desc: Build the application
+    cmds:
+      - echo "Generating templates files..."
+      - templ generate
+      - echo "Compiling binary..."
+      - go build -o {{.BINARY_NAME}} {{.MAIN_PATH}}
+
+  clean:
+    desc: Clean generated files
+    cmds:
+      - echo "Removing generated binary file..."
+      - rm {{.BINARY_NAME}}
