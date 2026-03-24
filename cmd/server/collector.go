@@ -16,8 +16,8 @@ import (
 // Regex to extract size and used from df output like "  1073741824  536870912"
 var dfStatsRegex = regexp.MustCompile(`^\s*(\d+)\s+(\d+)`)
 
-// Regex to extract Target Name from iscsiadm output line like "Target: iqn.2005-03.org.freebsd:volumedata"
-var targetNameRegex = regexp.MustCompile(`Target:\s+.*nomad-(.+)$`)
+// Regex to extract Target Name from iscsiadm output line like "Target: iqn.2000-01.com.synology:csi.hello (non-flash)"
+var targetNameRegex = regexp.MustCompile(`Target:\s+\S+:csi\.([^\s(]+)`)
 
 // Regex to extract SCSI disk from iscsiadm output line like "Attached scsi disk sdX"
 var attachedDiskRegex = regexp.MustCompile(`Attached scsi disk (sd[a-z]+)`)
@@ -154,7 +154,7 @@ func getDiskStats(devicePath string, logger *zap.Logger) (totalBytes, usedBytes 
 	var statsLine string
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
-		if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "Size") {
+		if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "1B-blocks") && !strings.HasPrefix(trimmedLine, "Size") {
 			statsLine = trimmedLine
 			break
 		}
