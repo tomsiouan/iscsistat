@@ -1,0 +1,29 @@
+# .golangci.yml
+
+linters:
+  enable:
+    # Standard linters
+    - errcheck # Checks that errors are handled
+    - gosimple # Linters for simpler Go code
+    - govet # Go static linter
+    - ineffassign # Detects assignments that have no effect
+    - staticcheck # Advanced static analysis
+    - unused # Detects unused variables, types, fields, and methods
+    - bodyclose # Checks that response bodies are closed
+    - misspell # Checks for common misspellings
+    - nolint # Checks for correct usage of // nolint comments
+
+  # Disable specified linters. Useful if a linter doesn't fit your style or project.
+  disable: []
+
+format:
+  gofmt: true
+# Options for individual linters (if necessary)
+# For example, to specify paths to exclude
+# issues-exclude-filename-regex: ".*_test\\.go" # Exclude test files
+
+# Files to include/exclude for linting
+# exclude-use-default: false # To disable default exclusions if needed
+# exclude-patterns: # List of patterns to exclude files or directories
+#   - "**/vendor/**"
+#   - "**/mock/**"

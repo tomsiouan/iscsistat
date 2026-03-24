@@ -15,6 +15,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// shutdownHandler manages the graceful shutdown of the HTTP server.
+// It blocks until the provided context is canceled, then attempts to shut down
+// the server within a 5-second grace period, and finally signals completion
+// by closing the serverStopped channel.
 func shutdownHandler(ctx context.Context, server *Server, serverStopped chan<- struct{}) {
 	<-ctx.Done()
 	server.logger.Info("shutdown signal received, initiating server shutdown...")
@@ -39,15 +43,18 @@ func run(ctx context.Context) error {
 	}
 	defer logger.Sync()
 
-	if err := handleCLIWithFlagSet(flag.CommandLine); err != nil {
+	configPath, err := handleCLIWithFlagSet(flag.CommandLine)
+	if err != nil {
 		logger.Error("failed to parse CLI flags", zap.Error(err))
 		return fmt.Errorf("failed to parse CLI flags: %w", err)
 	}
 
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		logger.Fatal("failed to load configuration", zap.Error(err))
 	}
+
+	initMetrics()
 
 	server := NewServer(cfg, logger)
 	server.StartCollector(ctx)

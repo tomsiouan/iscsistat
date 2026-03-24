@@ -6,13 +6,14 @@ import (
 	"os"
 )
 
-// handleCLIWithFlagSet parses command-line arguments and handles help/env flags.
-func handleCLIWithFlagSet(fs *flag.FlagSet) error {
+// handleCLIWithFlagSet parses command-line arguments and handles help/env/config flags.
+func handleCLIWithFlagSet(fs *flag.FlagSet) (string, error) {
 	helpFlag := fs.Bool("help", false, "Show help message")
 	envFlag := fs.Bool("env", false, "List environment variables and their default values")
+	configPath := fs.String("config", "", "Path to configuration file (overrides environment variables)")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
-		return err
+		return "", err
 	}
 
 	if *helpFlag {
@@ -24,7 +25,7 @@ func handleCLIWithFlagSet(fs *flag.FlagSet) error {
 		os.Exit(0)
 	}
 
-	return nil
+	return *configPath, nil
 }
 
 // printHelp displays the usage instructions for the binary.
@@ -36,6 +37,7 @@ func printHelp() {
 	fmt.Println("Options:")
 	fmt.Println("  --help     Show this help message")
 	fmt.Println("  --env      List all supported environment variables")
+	fmt.Println("  --config   Path to a YAML/JSON configuration file")
 	fmt.Println()
 	fmt.Println("If no options are provided, the server will start using environment variables or defaults.")
 }

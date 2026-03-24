@@ -6,36 +6,67 @@ import (
 	"time"
 
 	"iscsistat/internal/validator"
+
+	"github.com/BurntSushi/toml"
 )
 
 // Config represents the application's global configuration.
 type Config struct {
-	HTTP    HTTPConfig
-	Metrics MetricsConfig
+	HTTP    HTTPConfig    `toml:"http"`
+	Metrics MetricsConfig `toml:"metrics"`
 }
 
 // HTTPConfig holds the configuration settings for the HTTP server.
 type HTTPConfig struct {
-	Host string
-	Port int
-	TLS  TLSConfig
+	Host string    `toml:"host"`
+	Port int       `toml:"port"`
+	TLS  TLSConfig `toml:"tls"`
 }
 
 // TLSConfig defines the parameters for Transport Layer Security.
 type TLSConfig struct {
-	Enabled      bool
-	CertFile     string
-	KeyFile      string
-	ClientCAPath string
+	Enabled      bool   `toml:"enabled"`
+	CertFile     string `toml:"cert_file"`
+	KeyFile      string `toml:"key_file"`
+	ClientCAPath string `toml:"client_ca_path"`
 }
 
+// MetricsConfig defines the settings related to the metrics collection process.
 type MetricsConfig struct {
-	CollectInterval time.Duration
+	CollectInterval time.Duration `toml:"collect_interval"`
+}
+
+// LoadConfig acts as the single entry point for application configuration.
+// It follows a priority logic: if a file path is provided, it loads from TOML;
+// otherwise, it falls back to loading values from environment variables.
+func LoadConfig(path string) (Config, error) {
+	if path != "" {
+		return loadFromFile(path)
+	}
+
+	return loadFromEnv()
+}
+
+// loadFromFile reads, parses, and validates the configuration from a TOML file.
+// It returns a Config struct or an error if the file is missing, malformed,
+// or contains invalid values.
+func loadFromFile(filePath string) (Config, error) {
+	var cfg Config
+
+	if _, err := toml.DecodeFile(filePath, &cfg); err != nil {
+		return Config{}, fmt.Errorf("failed to parse TOML config file: %w", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return Config{}, fmt.Errorf("config validation failed: %w", err)
+	}
+
+	return cfg, nil
 }
 
 // LoadConfig loads configuration from environment variables and returns a Config.
 // It returns an error if loading or validation fails.
-func LoadConfig() (Config, error) {
+func loadFromEnv() (Config, error) {
 	cfg := Config{
 		HTTP: HTTPConfig{
 			Host: env("HTTP_HOST", "0.0.0.0"),

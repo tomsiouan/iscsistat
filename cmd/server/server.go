@@ -15,12 +15,17 @@ import (
 	"golang.org/x/net/http2"
 )
 
+// Server represents the HTTP application server and its dependencies.
+// It encapsulates the underlying HTTP server instance, the application
+// configuration, and a structured logger.
 type Server struct {
 	httpServer *http.Server
 	cfg        config.Config
 	logger     *zap.Logger
 }
 
+// loadClientCAs loads a client CA certificate from the specified path and returns a new CertPool.
+// It will log a fatal error and exit the application if the file cannot be read or parsed.
 func loadClientCAs(logger *zap.Logger, caPath string) *x509.CertPool {
 	clientCA := x509.NewCertPool()
 
@@ -36,6 +41,8 @@ func loadClientCAs(logger *zap.Logger, caPath string) *x509.CertPool {
 	return clientCA
 }
 
+// NewServer initializes and returns a new Server instance with the provided configuration and logger.
+// It configures TLS settings (including mTLS if specified), HTTP/2 support, and standard timeouts.
 func NewServer(cfg config.Config, logger *zap.Logger) *Server {
 	s := &Server{
 		cfg:    cfg,
@@ -66,6 +73,8 @@ func NewServer(cfg config.Config, logger *zap.Logger) *Server {
 	return s
 }
 
+// Serve starts the HTTP or HTTPS server depending on the TLS configuration.
+// It blocks until the server is closed or returns an error if the listener fails.
 func (s *Server) Serve() error {
 	var err error
 	if s.cfg.HTTP.TLS.Enabled {
@@ -85,6 +94,8 @@ func (s *Server) Serve() error {
 	return nil
 }
 
+// Shutdown gracefully shuts down the HTTP server without interrupting active connections,
+// using the provided context for timeout management.
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.logger.Info("shutting down HTTP server...")
 	return s.httpServer.Shutdown(ctx)

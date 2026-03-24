@@ -1,0 +1,57 @@
+name: "Package App"
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  package:
+    strategy:
+      matrix:
+        os: [linux, windows, darwin]
+        arch: [amd64, arm64]
+        go-version: ["1.25"]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Déterminer les variables de build
+        id: vars
+        run: |
+          OS=$(echo "${{ matrix.os }}" | tr '[:upper:]' '[:lower:]')
+          ARCH=$(echo "${{ matrix.arch }}" | tr '[:upper:]' '[:lower:]')
+          APP_NAME="iscsistat"
+
+          if [ "$OS" == "windows" ]; then
+            BINARY_NAME="${APP_NAME}-${OS}-${ARCH}.exe"
+          else
+            BINARY_NAME="${APP_NAME}-${OS}-${ARCH}"
+          fi
+
+          echo "::set-output name=GOOS::${OS}"
+          echo "::set-output name=GOARCH::${ARCH}"
+          echo "::set-output name=BINARY_NAME::${BINARY_NAME}"
+
+      - name: Build application
+        env:
+          GOOS: ${{ steps.vars.outputs.GOOS }}
+          GOARCH: ${{ steps.vars.outputs.GOARCH }}
+        run: |
+          echo "Building for ${{ steps.vars.outputs.GOOS }}/${{ steps.vars.outputs.GOARCH }}..."
+          go build -ldflags="-s -w" -o ${{ steps.vars.outputs.BINARY_NAME }} ./cmd/server/
+          echo "Build complete for ${{ steps.vars.outputs.GOOS }}/${{ steps.vars.outputs.GOARCH }}."
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iscsistat-${{ matrix.os }}-${{ matrix.arch }}
+          path: ${{ steps.vars.outputs.BINARY_NAME }}
