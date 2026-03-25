@@ -5,15 +5,18 @@ import (
 	"strings"
 	"time"
 
+	"iscsistat/internal/iscsi"
 	"iscsistat/internal/validator"
 
 	"github.com/BurntSushi/toml"
+	"go.uber.org/zap"
 )
 
 // Config represents the application's global configuration.
 type Config struct {
 	HTTP    HTTPConfig    `toml:"http"`
 	Metrics MetricsConfig `toml:"metrics"`
+	ISCSI   ISCSIConfig   `toml:"iscsi"`
 }
 
 // HTTPConfig holds the configuration settings for the HTTP server.
@@ -36,28 +39,38 @@ type MetricsConfig struct {
 	CollectInterval time.Duration `toml:"collect_interval"`
 }
 
+type ISCSIConfig struct {
+	Parser     string `toml:"parser"`
+	TrimPrefix string `toml:"trim_prefix"`
+	TrimSuffix string `toml:"trim_suffix"`
+}
+
 // LoadConfig acts as the single entry point for application configuration.
 // It follows a priority logic: if a file path is provided, it loads from TOML;
 // otherwise, it falls back to loading values from environment variables.
-func LoadConfig(path string) (Config, error) {
+func LoadConfig(path string, logger *zap.Logger) (Config, error) {
 	if path != "" {
-		return loadFromFile(path)
+		return loadFromFile(path, logger)
 	}
 
-	return loadFromEnv()
+	return loadFromEnv(logger)
 }
 
 // loadFromFile reads, parses, and validates the configuration from a TOML file.
 // It returns a Config struct or an error if the file is missing, malformed,
 // or contains invalid values.
-func loadFromFile(filePath string) (Config, error) {
+func loadFromFile(filePath string, logger *zap.Logger) (Config, error) {
 	var cfg Config
 
 	if _, err := toml.DecodeFile(filePath, &cfg); err != nil {
 		return Config{}, fmt.Errorf("failed to parse TOML config file: %w", err)
 	}
 
-	if err := cfg.Validate(); err != nil {
+	if cfg.ISCSI.Parser == "" {
+		cfg.ISCSI.Parser = iscsi.DefaultParser
+	}
+
+	if err := cfg.Validate(logger); err != nil {
 		return Config{}, fmt.Errorf("config validation failed: %w", err)
 	}
 
@@ -66,7 +79,7 @@ func loadFromFile(filePath string) (Config, error) {
 
 // LoadConfig loads configuration from environment variables and returns a Config.
 // It returns an error if loading or validation fails.
-func loadFromEnv() (Config, error) {
+func loadFromEnv(logger *zap.Logger) (Config, error) {
 	cfg := Config{
 		HTTP: HTTPConfig{
 			Host: env("HTTP_HOST", "0.0.0.0"),
@@ -81,9 +94,12 @@ func loadFromEnv() (Config, error) {
 		Metrics: MetricsConfig{
 			CollectInterval: envDuration("METRICS_COLLECT_INTERVAL", 15*time.Second),
 		},
+		ISCSI: ISCSIConfig{
+			Parser: env("ISCSI_PARSER", iscsi.DefaultParser),
+		},
 	}
 
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.Validate(logger); err != nil {
 		return Config{}, err
 	}
 
@@ -92,7 +108,7 @@ func loadFromEnv() (Config, error) {
 
 // Validate checks the configuration for consistency and required fields.
 // It returns a formatted error if any validation rules are violated, nil otherwise.
-func (c Config) Validate() error {
+func (c Config) Validate(logger *zap.Logger) error {
 	v := validator.New()
 
 	if c.HTTP.Port < 1 || c.HTTP.Port > 65535 {
@@ -112,9 +128,17 @@ func (c Config) Validate() error {
 		v.Add("METRICS_COLLECT_INTERVAL", "must be a positive duration (e.g., 15s, 1m)")
 	}
 
+	if !iscsi.ParserExists(c.ISCSI.Parser) {
+		v.Add("ISCSI_PARSER", fmt.Sprintf("'%s' is not a valid parser", c.ISCSI.Parser))
+	}
+
 	if !v.IsValid() {
 		return formatValidationErrors(v.Errors)
 	}
+
+	logger.Info("Configuration loaded successfully",
+		zap.String("parser", c.ISCSI.Parser),
+	)
 
 	return nil
 }
