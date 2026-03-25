@@ -6,10 +6,24 @@ This Go application automatically discovers iSCSI volumes, collects their storag
 
 In environments utilizing iSCSI for storage, it's crucial to monitor the capacity and usage of these volumes. This exporter provides a simple, automated way to integrate iSCSI storage metrics into a Prometheus monitoring stack. It addresses the need to dynamically identify iSCSI targets and report their disk space statistics without manual intervention.
 
+## Architecture — Client-Side Exporter
+
+This exporter runs **on the iSCSI initiator side** (the client that mounts the volumes), not on the storage server.
+
+**Advantages:**
+- Reports the actual disk usage as seen by the host (filesystem level)
+- No access to the storage backend required
+- Works with any iSCSI target (NAS, SAN, CSI provisioner...)
+
+**Limitations:**
+- Must be deployed on every node that mounts iSCSI volumes
+- Requires read access to `/sys/class/iscsi_session` and the mounted filesystems
+- Only sees volumes that are currently connected and mounted on the node
+
 ## Features
 
-*   **Dynamic iSCSI Volume Discovery:** Automatically finds connected iSCSI targets using the `iscsiadm` command.
-*   **Detailed Storage Metrics:** Reports total size and available space for each discovered volume in bytes.
+*   **Dynamic iSCSI Volume Discovery:** Automatically finds connected iSCSI sessions by reading `/sys/class/iscsi_session`.
+*   **Detailed Storage Metrics:** Reports total size and used space for each discovered volume in bytes, using `syscall.Statfs`.
 *   **Prometheus-Compatible Metrics:** Exposes metrics on `/metrics` endpoint, ready for Prometheus scraping.
 *   **Flexible Configuration:** Supports loading settings from a `config.toml` file or environment variables.
 
@@ -24,10 +38,8 @@ In environments utilizing iSCSI for storage, it's crucial to monitor the capacit
     ```bash
     task --list
     ```
-*   **`iscsiadm`** - Command-line utility for iSCSI management. Must be installed and configured on the host where the exporter will run.
-    *   On Debian/Ubuntu: `sudo apt install open-iscsi`
-    *   On RHEL/CentOS/Fedora: `sudo dnf install iscsi-initiator-utils`
-*   Access to iSCSI targets.
+*   Read access to `/sys/class/iscsi_session` on the host.
+*   iSCSI volumes must be **connected and mounted** on the host.
 
 ### Installation
 
@@ -46,9 +58,24 @@ In environments utilizing iSCSI for storage, it's crucial to monitor the capacit
 
 See the `config.example.toml` file.
 
-### iSCSI Discovery with `iscsiadm`
+## Available Parsers
 
-The `iscsiadm` command-line utility is employed to discover available iSCSI targets.
+The exporter supports different parsers to handle various iSCSI target naming schemes. The following parsers are currently available:
+
+| Parser Name          | Description                                                                 |
+|----------------------|-----------------------------------------------------------------------------|
+| `generic`            | Default parser that works with any iSCSI target (no special processing)    |
+| `democratic-csi`     | Parser for volumes managed by the [Democratic-CSI](https://github.com/democratic-csi/democratic-csi) plugin |
+
+Each parser can be configured with optional prefix/suffix trimming in the configuration file:
+
+```toml
+[iscsi]
+  parser      = "democratic-csi"
+  trim_prefix = "csi-"
+  trim_suffix = "-data"
+```
+
 
 ## Contributing
 

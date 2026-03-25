@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"iscsistat/internal/config"
+	"iscsistat/internal/iscsi"
+	"iscsistat/internal/iscsi/parsers"
 
 	"go.uber.org/zap"
 )
@@ -49,7 +51,13 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to parse CLI flags: %w", err)
 	}
 
-	cfg, err := config.LoadConfig(configPath)
+	// Register parsers here needed to verifying the configuration after.
+	iscsi.RegisterParsers([]iscsi.TargetNameParser{
+		&parsers.GenericParser{},
+		&parsers.DemocraticCSIParser{},
+	})
+
+	cfg, err := config.LoadConfig(configPath, logger)
 	if err != nil {
 		logger.Fatal("failed to load configuration", zap.Error(err))
 	}

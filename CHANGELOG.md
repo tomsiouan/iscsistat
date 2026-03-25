@@ -1,3 +1,11 @@
+# v0.0.3
+
+Released 2026-03-25
+
+- refactor(iscsi): replace `iscsiadm` + `df` + regex parsing with modular parser system using `/sys/class/iscsi_session` + `syscall.Statfs` for volume discovery and metrics collection
+- add support for multiple parsers with configurable naming schemes
+- add logging of the parser being used in the configuration
+
 # v0.0.2
 
 Released 2026-03-24
